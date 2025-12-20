@@ -2,7 +2,7 @@ const { User } = require('../models');
 const { hashPassword } = require('../utils/password');
 
 
-exports.getUser = async (req, res) => {
+exports.getUsers = async (req, res) => {
     try {
         const users = await User.findAll({ where: { role: { [require('sequelize').Op.ne]: 'ADMIN' } } });
         res.status(200).json(users);
