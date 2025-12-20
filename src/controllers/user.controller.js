@@ -1,6 +1,17 @@
 const { User } = require('../models');
 const { hashPassword } = require('../utils/password');
 
+
+exports.getUser = async (req, res) => {
+    try {
+        const users = await User.findAll({ where: { role: { [require('sequelize').Op.ne]: 'ADMIN' } } });
+        res.status(200).json(users);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: 'Failed to fetch users' });
+    }
+};
+
 exports.createUser = async (req, res) => {
     try {
         const { email, password, role } = req.body;
@@ -33,7 +44,7 @@ exports.createUser = async (req, res) => {
 
 exports.changePassword = async (req, res) => {
     try {
-console.log("Inside change password controller");
+        console.log("Inside change password controller");
         const { id, oldPassword, newPassword } = req.body;
         const userrole = req.user.role;
         if (userrole !== 'ADMIN') {
@@ -44,7 +55,7 @@ console.log("Inside change password controller");
             return res.status(404).json({ message: 'User not found' });
         }
         const isMatch = await user.comparePassword(oldPassword);
-        if(!isMatch) {
+        if (!isMatch) {
             return res.status(400).json({ message: 'Old password is incorrect' });
         }
         const hashed = await hashPassword(newPassword);
