@@ -8,10 +8,10 @@ exports.createEnquiry = async (req, res) => {
   try {
     const { email, phone } = req.body;
     // Check for existing enquiry with same email or phone
-    if(!email || !phone) {
+    if (!email || !phone) {
       return res.status(400).json({ message: 'Email and phone are required' });
     }
-    
+
     const existing = await Enquiry.findOne({
       where: {
         [Op.or]: [
@@ -128,6 +128,76 @@ exports.deleteEnquiry = async (req, res) => {
 
     res.json({
       message: 'Enquiry deleted successfully',
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.changeEnquiryStatus = async (req, res) => {
+  try {
+    const userrole = req.user.role;
+    const { enquiryId, newStatus } = req.body;
+    const enquiry = await Enquiry.findByPk(enquiryId);
+
+    if (!enquiry) {
+      return res.status(404).json({ message: 'Enquiry not found' });
+    }
+
+    const currentStatus = enquiry.candidateStatus;
+
+    // Rule 1: COUNSELLOR or ADMIN can change status to demo
+    if (newStatus === 'demo') {
+      if (!['COUNSELLOR', 'ADMIN'].includes(userrole)) {
+        return res.status(403).json({ message: 'Only COUNSELLOR or ADMIN can change status to demo' });
+      }
+    }
+    // Rule 2: COUNSELLOR or ADMIN can change status from demo to qualified demo
+    else if (currentStatus === 'demo' && newStatus === 'qualified demo') {
+      if (!['COUNSELLOR', 'ADMIN'].includes(userrole)) {
+        return res.status(403).json({ message: 'Only COUNSELLOR or ADMIN can move from demo to qualified demo' });
+      }
+    }
+    // Rule 3: ACCOUNTS or ADMIN can move from qualified demo to class or class qualified
+    else if (currentStatus === 'qualified demo' && ['class', 'class qualified'].includes(newStatus)) {
+      if (!['ACCOUNTS', 'ADMIN'].includes(userrole)) {
+        return res.status(403).json({ message: 'Only ACCOUNTS or ADMIN can move from qualified demo to class/class qualified' });
+      }
+    }
+    // Rule 3b: ACCOUNTS or ADMIN can move from class to class qualified
+    else if (currentStatus === 'class' && newStatus === 'class qualified') {
+      if (!['ACCOUNTS', 'ADMIN'].includes(userrole)) {
+        return res.status(403).json({ message: 'Only ACCOUNTS or ADMIN can move from class to class qualified' });
+      }
+    }
+    // Rule 4: HR or ADMIN can move from class qualified to placement
+    else if (currentStatus === 'class qualified' && newStatus === 'placement') {
+      if (!['HR', 'ADMIN'].includes(userrole)) {
+        return res.status(403).json({ message: 'Only HR or ADMIN can move from class qualified to placement' });
+      }
+    }
+    // Rule 4: HR or ADMIN can move from class to placement
+    else if (currentStatus === 'class' && newStatus === 'placement') {
+      if (!['HR', 'ADMIN'].includes(userrole)) {
+        return res.status(403).json({ message: 'Only HR or ADMIN can move from class to placement' });
+      }
+    }
+    // Default: Allow any role to move to enquiry stage
+    else if (newStatus === 'enquiry stage') {
+      // Allow all authenticated users to set enquiry stage
+    }
+    // Disallow unauthorized transitions
+    else {
+      return res.status(403).json({ message: `Invalid status transition from ${currentStatus} to ${newStatus}` });
+    }
+
+    enquiry.candidateStatus = newStatus;
+    await enquiry.save();
+
+    res.status(200).json({
+      message: 'Enquiry status updated successfully',
+      enquiry,
     });
   } catch (error) {
     console.error(error);
