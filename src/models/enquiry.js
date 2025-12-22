@@ -37,7 +37,7 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: true,
                 defaultValue: [],
             },
-            timing: {
+            trainingMode: {
                 type: DataTypes.STRING(50),
                 allowNull: true,
             },
@@ -70,7 +70,7 @@ module.exports = (sequelize, DataTypes) => {
                 defaultValue: false,
             },
             candidateStatus: {
-                type: DataTypes.ENUM('demo', 'qualified demo', 'class', 'class qualified', 'placement'),
+                type: DataTypes.ENUM('demo', 'qualified demo', 'class', 'class qualified', 'placement','enquiry stage'),
                 allowNull: false,
                 defaultValue: 'demo',
             },
