@@ -5,8 +5,20 @@ const { Enquiry } = require('../models');
  */
 exports.createEnquiry = async (req, res) => {
   try {
+    const { email, phone } = req.body;
+    // Check for existing enquiry with same email or phone
+    const existing = await Enquiry.findOne({
+      where: {
+        [Enquiry.sequelize.Op.or]: [
+          { email },
+          { phone }
+        ]
+      }
+    });
+    if (existing) {
+      return res.status(400).json({ message: 'Email or phone already exists' });
+    }
     const enquiry = await Enquiry.create(req.body);
-
     res.status(201).json({
       message: 'Enquiry created successfully',
       enquiry,
@@ -64,6 +76,22 @@ exports.updateEnquiry = async (req, res) => {
       return res.status(404).json({
         message: 'Enquiry not found',
       });
+    }
+
+    const { email, phone } = req.body;
+    if (email || phone) {
+      const existing = await Enquiry.findOne({
+        where: {
+          [Enquiry.sequelize.Op.or]: [
+            email ? { email } : {},
+            phone ? { phone } : {}
+          ],
+          id: { [Enquiry.sequelize.Op.ne]: enquiry.id }
+        }
+      });
+      if (existing) {
+        return res.status(400).json({ message: 'Email or phone already exists' });
+      }
     }
 
     await enquiry.update(req.body);

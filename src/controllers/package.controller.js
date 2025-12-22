@@ -5,23 +5,21 @@ const { Package, Subject } = require('../models');
  */
 exports.createPackage = async (req, res) => {
   try {
-    const { name, code, subjectId } = req.body;
+    const { name, code, subjectIds } = req.body;
 
-    if (!name || !code || !subjectId) {
+    if (!name || !code || !Array.isArray(subjectIds) || subjectIds.length === 0) {
       return res.status(400).json({
-        message: 'name, code and subjectId are required',
+        message: 'name, code and subjectIds (array) are required',
       });
     }
 
-    // check subject exists
-    const subject = await Subject.findByPk(subjectId);
-    if (!subject) {
-      return res.status(404).json({
-        message: 'Subject not found',
-      });
+    // Check all subjects exist
+    const foundSubjects = await Subject.findAll({ where: { id: subjectIds } });
+    if (foundSubjects.length !== subjectIds.length) {
+      return res.status(404).json({ message: 'One or more subjects not found' });
     }
 
-    const pkg = await Package.create({ name, code, subjectId });
+    const pkg = await Package.create({ name, code, subjectIds });
 
     res.status(201).json({
       message: 'Package created successfully',
@@ -85,6 +83,17 @@ exports.updatePackage = async (req, res) => {
       return res.status(404).json({
         message: 'Package not found',
       });
+    }
+
+    const { subjectIds } = req.body;
+    if (subjectIds) {
+      if (!Array.isArray(subjectIds) || subjectIds.length === 0) {
+        return res.status(400).json({ message: 'subjectIds must be a non-empty array' });
+      }
+      const foundSubjects = await Subject.findAll({ where: { id: subjectIds } });
+      if (foundSubjects.length !== subjectIds.length) {
+        return res.status(404).json({ message: 'One or more subjects not found' });
+      }
     }
 
     await pkg.update(req.body);
